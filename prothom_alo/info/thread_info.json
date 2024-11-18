@@ -1,0 +1,26 @@
+[
+  {
+    "dates": 10,
+    "threads": 4,
+    "time_taken": 303,
+    "num_errors": 0
+  },
+  {
+    "dates": 10,
+    "threads": 8,
+    "time_taken": 308,
+    "num_errors": 0
+  },
+  {
+    "dates": 10,
+    "threads": 12,
+    "time_taken": 336,
+    "num_errors": 0
+  },
+  {
+    "dates": 10,
+    "threads": 16,
+    "time_taken": 381,
+    "num_errors": 0
+  }
+]
