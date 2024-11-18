@@ -121,13 +121,13 @@ def scrape_article(request_id):
 base_url = 'https://www.ittefaq.com.bd/'
 
 with open("starting_url.json", "r") as file:
-  staring_url = json.load(file)
+  starting_url = json.load(file)
 
 # 672352 initial staring url
 # 704500 ending url
 
 ending_url = 706874
-for i in range(staring_url, ending_url + 1):
+for i in range(starting_url, ending_url + 1):
   f = scrape_article(i)
   next_start = i + 1
   if (f == -1):

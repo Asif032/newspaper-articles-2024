@@ -7,8 +7,8 @@ from db import create_connection, init, insert_article, insert_status
 from datetime_converter import convert_to_english
  
 
-connection = create_connection("localhost", "user", "password", "ittefaq_news_article")
-init(connection)
+# connection = create_connection("localhost", "user", "password", "ittefaq_news_article")
+# init(connection)
 
 
 def scrape_article(request_id):
