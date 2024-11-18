@@ -3,21 +3,35 @@ import requests
 import json
 import sys
 import time
-from db import create_connection, init, insert_article, insert_status
+import unicodedata
+# from db import create_connection, init, insert_article, insert_status
 from datetime_converter import convert_to_english
+from concurrent.futures import ThreadPoolExecutor
  
 
 # connection = create_connection("localhost", "user", "password", "ittefaq_news_article")
 # init(connection)
 
+base_url = 'https://mzamin.com/news.php?news='
+
+processed_urls = set()
+with open('mzamin_news_articles.jsonl', 'r', encoding='utf-8') as file:
+  for line in file:
+    data = json.loads(line)
+    if 'url' in data:
+      processed_urls.add(data['url'])
+
 
 def scrape_article(request_id):
   url = base_url + str(i)
   response = None
-  print(f"Processing {url}...")
+  print(f"Processing {url} ...", end='')
+  if url in processed_urls:
+    print("already done, skipping")
+    return
   
   try:
-    response = requests.get(url)
+    response = requests.get(url, timeout=5)
     response.raise_for_status()
   except requests.exceptions.ConnectionError as e:
     print("Connection error occurred:", e)
@@ -41,7 +55,7 @@ def scrape_article(request_id):
       "id": request_id,
       "status_code": status_code
     }
-    insert_status(connection, status_report)
+    # insert_status(connection, status_report)
     if response and response.status_code != 200:
       return 0
  
@@ -49,57 +63,55 @@ def scrape_article(request_id):
   soup = BeautifulSoup(response.content, 'lxml')
   # with open("article.html", "w", encoding="utf-8") as file:
   #   file.write(soup.prettify())
-  
-  #date_published
-  date_published = soup.find(itemprop='datePublished').get_text(strip=True) if soup.find(itemprop='datePublished') else None
-  # date_published = convert_to_english(date_published[9:])
-  # if date_published and len(date_published) >= 10:
-  #   date_published = date_published[9:]
+
+
+  date_published = None
+  date_published_container = soup.find('div', class_='col-sm-8')
+  h5_tag = None
+  if date_published_container:
+    h5_tag = date_published_container.find('h5')
+  if h5_tag:
+  # Get the next sibling or the following <p> tag
+    next_sibling = h5_tag.next_sibling
+    while next_sibling:
+      if next_sibling.name == 'p':  # Handle <p> tag case
+        date_published = next_sibling.text.strip()
+        break
+      elif next_sibling.string and next_sibling.string.strip():  # Handle plain text case
+        date_published = next_sibling.string.strip()
+        break
+      next_sibling = next_sibling.next_sibling
+
+  print(date_published)
   
   #date_modified
-  date_modified = soup.find(itemprop='dateModified').get_text(strip=True) if soup.find(itemprop='dateModified') else None
+  date_modified = date_published
   # date_modified = convert_to_english(date_modified[8:])
   # if date_published and len(date_published) >= 9:
   #   date_modified = date_modified[8:]
   
   #author
-  author = soup.find(itemprop='author').get_text(strip=True) if soup.find(itemprop='author') else None
-  author = [a.strip() for a in author.split(',')] if author else []
+  author = soup.find('h5', class_=None).text.strip() if soup.find('h5', class_=None) else None
   
   #category
-  category = soup.find(class_='secondary_logo').get_text(strip=True) if soup.find(class_='secondary_logo') else None
-  
+  category = soup.find('h4', class_='sectitle').text.strip() if soup.find('h4', class_='sectitle') else None
+
   #tag
-  topic_list = soup.find(class_ = 'topic_list')
   tag = []
-  if topic_list:
-    tag_ = topic_list.find_all('strong')
-    for t in tag_:
-      tag.append(t.get_text(strip=True))
-  else:
-    tag = None
     
   #title
-  title = soup.find('h1', itemprop='headline').get_text(strip=True) if soup.find('h1', itemprop='headline') else None
+  title = soup.find('h1', class_='lh-base fs-1').text.strip() \
+    if soup.find('h1', class_ = 'lh-base fs-1') else None
   
   #url
-  main_entity = soup.find(attrs={"itemprop": "mainEntityOfPage"})
   
-  if main_entity:
-    content_value = main_entity.get("content")
-    
-    full_url = content_value
-    # Find the position of the second slash after the domain
-    first_slash = full_url.find('/', 8)  # The 8 skips the 'https://'
-    second_slash = full_url.find('/', first_slash + 1)
-
-    if second_slash != -1:
-      url = full_url[:second_slash]
-    else:
-      url = full_url
       
   #content
-  content = soup.find(itemprop='articleBody').get_text(strip=True) if soup.find(itemprop='articleBody') else None
+  content = soup.find('div', class_='col-sm-10 offset-sm-1 fs-5 lh-base mt-4 mb-5').get_text().strip() \
+    if soup.find('div', class_='col-sm-10 offset-sm-1 fs-5 lh-base mt-4 mb-5') else None
+  if content:
+    content = content.replace('\n', ' ')
+    content = unicodedata.normalize("NFKC", content)
   
   article = {
     "date_published": date_published,
@@ -111,24 +123,29 @@ def scrape_article(request_id):
     "url": url,
     "content": content
   }
-  
-  # inserting the article into mysql database
-  insert_article(connection, article)
+  # print(article)
+  with open('mzamin_news_articles.jsonl', 'a', encoding='utf-8') as file:
+    if not url in processed_urls:
+      file.write(json.dumps(article, ensure_ascii=False) + '\n')
+      processed_urls.add(article["url"])
+  # insert_article(connection, article)
+  print("done")
   return 1
   
-  
-  
-base_url = 'https://www.ittefaq.com.bd/'
 
 with open("starting_url.json", "r") as file:
-  staring_url = json.load(file)
+  starting_url = json.load(file)
 
 # 672352 initial staring url
 # 704500 ending url
-
-ending_url = 706874
-for i in range(staring_url, ending_url + 1):
-  f = scrape_article(i)
+ending_url = 134020
+workers = 20
+batch = []
+for i in range(starting_url, ending_url + 1):
+  batch.append(i)
+  if len(batch) == workers or i == ending_url:
+    with open ThreadPoolExecutor()
+  
   next_start = i + 1
   if (f == -1):
     next_start = i
@@ -136,5 +153,3 @@ for i in range(staring_url, ending_url + 1):
     json.dump(next_start, file)
   if (f == -1):
     sys.exit(-1)
-  
-connection.close()
