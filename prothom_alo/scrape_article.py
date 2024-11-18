@@ -21,7 +21,6 @@ with open('prothom_alo_news_articles.jsonl', 'r', encoding='utf-8') as file:
 
 def close_connection(connection):
   if connection:
-    cursor
     connection.close()
     print("Connection closed.")
     
@@ -79,7 +78,7 @@ def handle_connection_article_error(status, url, default_date, date_modified, st
   retries = 1
   
   if interrupted:
-    countdown(10, start_date, start_idx)
+    countdown(10, default_date, start_idx)
   
   while True:
     for k in range(8):

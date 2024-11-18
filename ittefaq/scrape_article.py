@@ -125,7 +125,6 @@ with open("starting_url.json", "r") as file:
 
 # 672352 initial staring url
 # 704500 ending url
-
 ending_url = 706874
 for i in range(starting_url, ending_url + 1):
   f = scrape_article(i)

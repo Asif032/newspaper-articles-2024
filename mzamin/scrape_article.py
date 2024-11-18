@@ -21,17 +21,34 @@ with open('mzamin_news_articles.jsonl', 'r', encoding='utf-8') as file:
     if 'url' in data:
       processed_urls.add(data['url'])
 
+def save_progress(next_url_number):
+  with open('starting_url.json', 'w') as file:
+    file.write(str(next_url_number))
+
+def countdown(seconds, next_url_number):
+  print("Press 'Ctrl+C' to exit the program.")
+  try:
+    for i in range(seconds, 0, -1):
+      sys.stdout.write(f"\r{i} seconds remaining...")
+      sys.stdout.flush()
+      time.sleep(1)
+  except KeyboardInterrupt:
+    save_progress(next_url_number)
+    print("\nExiting program...")
+    sys.exit(0)
+    
+  print("\nExit window closed, resuming.")
 
 def scrape_article(request_id):
   url = base_url + str(i)
   response = None
-  print(f"Processing {url} ...", end='')
+  # print(f"Processing {url} ...", end='')
   if url in processed_urls:
-    print("already done, skipping")
+    # print("already done, skipping.")
     return
   
   try:
-    response = requests.get(url, timeout=5)
+    response = requests.get(url, timeout=30)
     response.raise_for_status()
   except requests.exceptions.ConnectionError as e:
     print("Connection error occurred:", e)
@@ -82,7 +99,7 @@ def scrape_article(request_id):
         break
       next_sibling = next_sibling.next_sibling
 
-  print(date_published)
+  # print(date_published)
   
   #date_modified
   date_modified = date_published
@@ -129,7 +146,7 @@ def scrape_article(request_id):
       file.write(json.dumps(article, ensure_ascii=False) + '\n')
       processed_urls.add(article["url"])
   # insert_article(connection, article)
-  print("done")
+  # print("done")
   return 1
   
 
@@ -141,15 +158,11 @@ with open("starting_url.json", "r") as file:
 ending_url = 134020
 workers = 20
 batch = []
-for i in range(starting_url, ending_url + 1):
-  batch.append(i)
-  if len(batch) == workers or i == ending_url:
-    with open ThreadPoolExecutor()
-  
-  next_start = i + 1
-  if (f == -1):
-    next_start = i
-  with open("starting_url.json", "w") as file:
-    json.dump(next_start, file)
-  if (f == -1):
-    sys.exit(-1)
+for i in range(starting_url, ending_url + 1, workers):
+  try:
+    with ThreadPoolExecutor(max_workers=workers) as article_pool:
+      futures = [article_pool.submit(scrape_article, j) for j in range(i, min(ending_url, i + workers))]
+      print(f"{i/ending_url}")
+  except KeyboardInterrupt:
+    countdown(10, i)
+  save_progress(i + 1)
