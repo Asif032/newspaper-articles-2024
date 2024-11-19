@@ -7,6 +7,7 @@ import unicodedata
 # from db import create_connection, init, insert_article, insert_status
 from datetime_converter import convert_to_english
 from concurrent.futures import ThreadPoolExecutor
+import math
  
 
 # connection = create_connection("localhost", "user", "password", "ittefaq_news_article")
@@ -38,6 +39,8 @@ def countdown(seconds, next_url_number):
     sys.exit(0)
     
   print("\nExit window closed, resuming.")
+
+articles = []
 
 def scrape_article(request_id):
   url = base_url + str(i)
@@ -103,9 +106,6 @@ def scrape_article(request_id):
   
   #date_modified
   date_modified = date_published
-  # date_modified = convert_to_english(date_modified[8:])
-  # if date_published and len(date_published) >= 9:
-  #   date_modified = date_modified[8:]
   
   #author
   author = soup.find('h5', class_=None).text.strip() if soup.find('h5', class_=None) else None
@@ -141,10 +141,8 @@ def scrape_article(request_id):
     "content": content
   }
   # print(article)
-  with open('mzamin_news_articles.jsonl', 'a', encoding='utf-8') as file:
-    if not url in processed_urls:
-      file.write(json.dumps(article, ensure_ascii=False) + '\n')
-      processed_urls.add(article["url"])
+  if not url in processed_urls:
+    articles.append(article)
   # insert_article(connection, article)
   # print("done")
   return 1
@@ -153,16 +151,36 @@ def scrape_article(request_id):
 with open("starting_url.json", "r") as file:
   starting_url = json.load(file)
 
-# 672352 initial staring url
-# 704500 ending url
-ending_url = 134020
-workers = 20
+ending_url = 136353
+total_urls = ending_url - starting_url + 1
+# 90903 initial staring url
+# 136353 ending url
+workers = 16
 batch = []
+
+t0 = time.time()
+
 for i in range(starting_url, ending_url + 1, workers):
   try:
     with ThreadPoolExecutor(max_workers=workers) as article_pool:
       futures = [article_pool.submit(scrape_article, j) for j in range(i, min(ending_url, i + workers))]
-      print(f"{i/ending_url}")
   except KeyboardInterrupt:
     countdown(10, i)
-  save_progress(i + 1)
+  with open('mzamin_news_articles.jsonl', 'a', encoding='utf-8') as file:
+    for article in articles:
+      file.write(json.dumps(article, ensure_ascii=False) + '\n')
+      processed_urls.add(article["url"])
+      
+  articles.clear()
+  completed_percentage = math.ceil((i + workers - starting_url) * 60 / total_urls)
+  incompleted_percentage = 60 - completed_percentage
+  print(f"\r{completed_percentage * '-'}>{incompleted_percentage * '-'}| {i}/{ending_url}", end='')
+  save_progress(i + workers)
+  
+t1 = time.time()
+time_spent = int(t1 - t0)
+seconds = time_spent % 60
+time_spent //= 60
+minutes = time_spent % 60
+hours = time_spent // 60
+print(f"\n{ending_url - starting_url} urls processed in {hours} hour(s) {minutes} minute(s) {seconds} second(s).")
