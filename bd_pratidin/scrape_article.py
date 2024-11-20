@@ -121,8 +121,9 @@ def get_elapsed_time(total_time):
   if hours:
     time_string += f"{hours} hour(s) "
   if minutes:
-    time_string += f"{minutes} minute(s). "
-  time_string += f"{seconds} second(s)."
+    time_string += f"{minutes} minute(s) "
+  time_string += f"{seconds} second(s)"
+  
   return time_string
 
 def get_eta(t0, t1, completed, total):
@@ -137,7 +138,7 @@ articles = []
 def scrape_urls(default_date, start_idx = 0, workers=20):
   t0 = time.time()
   date = default_date.strftime("%Y-%m-%d")
-  print(f"Processing articles of date: {date}")
+  # print(f"Processing articles of date: {date}")
   sitemap_url = f"https://www.bd-pratidin.com/daily-sitemap/{date}/sitemap.xml"
   status_code = -6
   response = None
@@ -227,7 +228,7 @@ def scrape_urls(default_date, start_idx = 0, workers=20):
       
     # print(f"Multithreading completed, handling errors.")
     for url, date_modified, status in errors:
-      if status < 0:
+      if status != "HTTP_ERROR":
         article, status, status_code = handle_article_error(status, url, default_date, date_modified, start_idx)
       completed += 1
       # print(url)

@@ -56,7 +56,7 @@ def handle_date_connection_error(status, start_date, start_idx, from_error=False
   if interrupted:
     countdown(10, start_date, start_idx)
   retries = 1
-  while True:
+  for i in range(20):
     for k in range(8):
       print(f"retrying...({retries})")
       retries += 1
