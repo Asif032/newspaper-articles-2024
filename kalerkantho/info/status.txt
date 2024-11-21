@@ -1,7 +1,0 @@
-return {}, "HTTP_ERROR", response.status_code
-return {}, "CONNECTION_ERROR", -1
-return {}, "TIMEOUT", -2
-return {}, "REQUEST_EXCEPTION", -3
-return {}, "ERROR", -4
-return {}, "NO_CONTENT", -5
-return {}, "INVALID_URL", -10
